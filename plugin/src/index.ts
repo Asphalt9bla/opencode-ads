@@ -12,35 +12,35 @@ interface Ad {
   description: string
   sponsor: string
   url: string
-  cpm: number // advertiser CPM in USDC cents
+  cpm: number
 }
 
 export const OpencodeAds: Plugin = async ({ client }) => {
   let currentSessionId: string | null = null
   let thinkingStartTime: number | null = null
   let currentAd: Ad | null = null
-  let userToken: string | null = null
 
-  // Read token from config file
+  const getAuthPath = () => {
+    const home = process.env.HOME || process.env.USERPROFILE || ""
+    return home + "/.config/opencode-ads/auth.json"
+  }
+
   async function getToken(): Promise<string | null> {
-    if (userToken) return userToken
     try {
-      const home = process.env.HOME || process.env.USERPROFILE || ""
-      const configPath = `${home}/.config/opencode-ads/auth.json`
-      const file = await Bun.file(configPath).json()
-      userToken = file.token
-      return userToken
+      const file = Bun.file(getAuthPath())
+      const data = await file.json()
+      return data.token || null
     } catch {
       return null
     }
   }
 
-  // Fetch next ad from backend
   async function fetchAd(): Promise<Ad | null> {
     const token = await getToken()
+    if (!token) return null
     try {
       const res = await fetch(`${BACKEND_URL}/api/ads/next`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) return null
       return await res.json()
@@ -49,31 +49,25 @@ export const OpencodeAds: Plugin = async ({ client }) => {
     }
   }
 
-  // Send impression to backend
   async function sendImpression(adId: string, sessionId: string, durationMs: number): Promise<void> {
     const token = await getToken()
+    if (!token) return
     try {
       await fetch(`${BACKEND_URL}/api/impressions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          adId,
-          sessionId,
-          durationMs,
-          timestamp: Date.now(),
-        }),
+        body: JSON.stringify({ adId, sessionId, durationMs, timestamp: Date.now() }),
       })
     } catch {
-      // Silently fail — don't disrupt the user's workflow
+      // Silently fail
     }
   }
 
   return {
     event: async ({ event }) => {
-      // Track session
       if (event.type === "session.created" || event.type === "session.updated") {
         currentSessionId = event.properties?.sessionID || null
       }
@@ -81,7 +75,6 @@ export const OpencodeAds: Plugin = async ({ client }) => {
       if (event.type === "session.status") {
         const status = event.properties?.status
 
-        // AI started thinking — fetch and show ad
         if (status === "thinking" || status === "running") {
           thinkingStartTime = Date.now()
           currentAd = await fetchAd()
@@ -95,18 +88,12 @@ export const OpencodeAds: Plugin = async ({ client }) => {
           }
         }
 
-        // AI finished thinking — log impression
         if (status === "idle" && thinkingStartTime && currentAd) {
           const duration = Date.now() - thinkingStartTime
 
           if (duration >= 3000) {
-            await sendImpression(
-              currentAd.id,
-              currentSessionId || "unknown",
-              duration
-            )
+            await sendImpression(currentAd.id, currentSessionId || "unknown", duration)
 
-            // Show earnings (70% of CPM / 1000 per impression)
             const earnedUsd = (currentAd.cpm * 0.7) / 100000
             await client.tui.toast.show({
               title: "💰 Earned",
