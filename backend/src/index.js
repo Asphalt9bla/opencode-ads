@@ -36,7 +36,27 @@ async function auth(c, next) {
 }
 
 // ===== ROUTES =====
+// Root — landing page
+app.get("/", (c) => {
+  return c.json({
+    name: "opencode-ads",
+    version: "0.2.0",
+    description: "Get paid in USDC while your AI thinks",
+    endpoints: {
+      health: "/health",
+      signup: "POST /api/auth/signup",
+      login: "POST /api/auth/login",
+      ads: "GET /api/ads/next",
+      impressions: "POST /api/impressions",
+      earnings: "GET /api/earnings",
+      payout: "POST /api/payouts/request",
+      leaderboard: "GET /api/leaderboard",
+    },
+    github: "https://github.com/Asphalt9bla/opencode-ads",
+  });
+});
 
+// Health
 app.get("/health", (c) => {
   return c.json({ status: "ok", service: "opencode-ads", version: "0.2.0" });
 });
