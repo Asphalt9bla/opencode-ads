@@ -1,0 +1,20 @@
+{
+  "name": "opencode-ads",
+  "version": "0.1.0",
+  "description": "Get paid while your AI thinks. Sponsor messages during OpenCode wait states.",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "latest"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0"
+  },
+  "keywords": ["opencode", "plugin", "ads", "sponsor", "earn"],
+  "license": "Apache-2.0"
+}
