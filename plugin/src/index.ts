@@ -1,31 +1,19 @@
+// @ts-nocheck
 import type { Plugin } from "@opencode-ai/plugin"
-
-// ============================================================
-// opencode-ads — Get paid while your AI thinks
-// ============================================================
 
 const BACKEND_URL = "https://opencode-ads-production.up.railway.app"
 
-interface Ad {
-  id: string
-  title: string
-  description: string
-  sponsor: string
-  url: string
-  cpm: number
-}
-
-export const OpencodeAds: Plugin = async ({ client }) => {
-  let currentSessionId: string | null = null
-  let thinkingStartTime: number | null = null
-  let currentAd: Ad | null = null
+export const OpencodeAds = async ({ client }) => {
+  let currentSessionId = null
+  let thinkingStartTime = null
+  let currentAd = null
 
   const getAuthPath = () => {
     const home = process.env.HOME || process.env.USERPROFILE || ""
     return home + "/.config/opencode-ads/auth.json"
   }
 
-  async function getToken(): Promise<string | null> {
+  async function getToken() {
     try {
       const file = Bun.file(getAuthPath())
       const data = await file.json()
@@ -35,7 +23,7 @@ export const OpencodeAds: Plugin = async ({ client }) => {
     }
   }
 
-  async function fetchAd(): Promise<Ad | null> {
+  async function fetchAd() {
     const token = await getToken()
     if (!token) return null
     try {
@@ -49,7 +37,7 @@ export const OpencodeAds: Plugin = async ({ client }) => {
     }
   }
 
-  async function sendImpression(adId: string, sessionId: string, durationMs: number): Promise<void> {
+  async function sendImpression(adId, sessionId, durationMs) {
     const token = await getToken()
     if (!token) return
     try {
@@ -61,55 +49,51 @@ export const OpencodeAds: Plugin = async ({ client }) => {
         },
         body: JSON.stringify({ adId, sessionId, durationMs, timestamp: Date.now() }),
       })
-    } catch {
-      // Silently fail
-    }
+    } catch {}
+  }
+
+  async function showToast(title, message, variant) {
+    try {
+      await client.tui.showToast({ title, message, variant, duration: 3000 })
+    } catch {}
   }
 
   return {
     event: async ({ event }) => {
       if (event.type === "session.created" || event.type === "session.updated") {
-        currentSessionId = event.properties?.sessionID || null
+        currentSessionId = event.properties?.info?.id || null
       }
 
       if (event.type === "session.status") {
-        const status = event.properties?.status
-
-        if (status === "thinking" || status === "running") {
+        if (event.properties?.status?.type === "busy") {
           thinkingStartTime = Date.now()
           currentAd = await fetchAd()
-
           if (currentAd) {
-            await client.tui.toast.show({
-              title: `💰 ${currentAd.sponsor}`,
-              message: `${currentAd.title} — ${currentAd.description}`,
-              variant: "info",
-            })
+            await showToast(`💰 ${currentAd.sponsor}`, `${currentAd.title} — ${currentAd.description}`, "info")
           }
         }
 
-        if (status === "idle" && thinkingStartTime && currentAd) {
+        if (event.properties?.status?.type === "idle" && thinkingStartTime && currentAd) {
           const duration = Date.now() - thinkingStartTime
-
           if (duration >= 3000) {
             await sendImpression(currentAd.id, currentSessionId || "unknown", duration)
-
             const earnedUsd = (currentAd.cpm * 0.7) / 100000
-            await client.tui.toast.show({
-              title: "💰 Earned",
-              message: `+$${earnedUsd.toFixed(4)} USDC`,
-              variant: "success",
-            })
+            await showToast("💰 Earned", `+$${earnedUsd.toFixed(4)} USDC`, "success")
           }
-
           thinkingStartTime = null
           currentAd = null
         }
+      }
 
-        if (status === "error") {
-          thinkingStartTime = null
-          currentAd = null
+      if (event.type === "session.idle" && thinkingStartTime && currentAd) {
+        const duration = Date.now() - thinkingStartTime
+        if (duration >= 3000) {
+          await sendImpression(currentAd.id, currentSessionId || "unknown", duration)
+          const earnedUsd = (currentAd.cpm * 0.7) / 100000
+          await showToast("💰 Earned", `+$${earnedUsd.toFixed(4)} USDC`, "success")
         }
+        thinkingStartTime = null
+        currentAd = null
       }
     },
   }

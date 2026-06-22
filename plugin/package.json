@@ -9,12 +9,18 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@opencode-ai/plugin": "latest"
+    "@opencode-ai/plugin": "^1.17.9"
   },
   "devDependencies": {
-    "typescript": "^5.4.0",
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "typescript": "^5.9.3"
   },
-  "keywords": ["opencode", "plugin", "ads", "sponsor", "earn"],
+  "keywords": [
+    "opencode",
+    "plugin",
+    "ads",
+    "sponsor",
+    "earn"
+  ],
   "license": "Apache-2.0"
 }
