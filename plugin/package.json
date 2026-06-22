@@ -1,26 +1,14 @@
 {
   "name": "opencode-ads",
-  "version": "0.1.0",
-  "description": "Get paid while your AI thinks. Sponsor messages during OpenCode wait states.",
+  "version": "0.2.0",
+  "description": "Get paid in USDC while your AI thinks",
   "type": "module",
-  "main": "src/index.ts",
-  "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch"
-  },
-  "dependencies": {
-    "@opencode-ai/plugin": "^1.17.9"
-  },
-  "devDependencies": {
-    "@types/node": "^20.0.0",
-    "typescript": "^5.9.3"
-  },
-  "keywords": [
-    "opencode",
-    "plugin",
-    "ads",
-    "sponsor",
-    "earn"
-  ],
-  "license": "Apache-2.0"
+  "main": "dist/index.js",
+  "files": ["dist/"],
+  "keywords": ["opencode", "plugin", "ads", "sponsor", "earn", "usdc"],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Asphalt9bla/opencode-ads"
+  }
 }
